@@ -1,0 +1,11 @@
+PORT=8080
+
+DB_USER=postgres
+DB_PASSWORD=galau712
+DB_HOST=localhost
+DB_NAME=cms_pbr
+DB_PORT=5432
+
+JWT_SECRET=golearn
+JWT_ACCESS_TOKEN_SECRET = golearnaccess
+JWT_REFRESH_TOKEN_SECRET = golearnrefresh
