@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/tedbearr/go-learn/controller"
 	"github.com/tedbearr/go-learn/database"
+	"github.com/tedbearr/go-learn/middleware"
 	"github.com/tedbearr/go-learn/service"
 	"gorm.io/gorm"
 )
@@ -15,7 +16,7 @@ var (
 )
 
 func GlobalParameterRoute(route fiber.Router) {
-	group := route.Group("/global-parameter")
+	group := route.Group("/global-parameter", middleware.Jwt)
 	group.Get("/", globalParameterController.All)
 	group.Get("/:id", globalParameterController.Find)
 	group.Post("/insert", globalParameterController.Insert)

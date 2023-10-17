@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/tedbearr/go-learn/config"
 	"github.com/tedbearr/go-learn/helper"
 	"github.com/tedbearr/go-learn/route"
@@ -16,7 +17,7 @@ func main() {
 
 	app.Use(cors.New())
 
-	// app.Use(logger.New())
+	app.Use(logger.New())
 
 	helper.Log()
 
