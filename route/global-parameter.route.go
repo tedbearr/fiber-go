@@ -17,4 +17,8 @@ var (
 func GlobalParameterRoute(route fiber.Router) {
 	group := route.Group("/global-parameter")
 	group.Get("/", globalParameterController.All)
+	group.Get("/:id", globalParameterController.Find)
+	group.Post("/insert", globalParameterController.Insert)
+	group.Post("update/:id", globalParameterController.Update)
+	group.Post("/delete/:id", globalParameterController.Delete)
 }

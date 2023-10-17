@@ -1,13 +1,23 @@
 package controller
 
 import (
+	"errors"
+	"strconv"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/tedbearr/go-learn/entity"
+	"github.com/tedbearr/go-learn/dto"
+	"github.com/tedbearr/go-learn/helper"
 	"github.com/tedbearr/go-learn/service"
+	"gorm.io/gorm"
 )
 
 type GlobalParameterController interface {
 	All(context *fiber.Ctx) error
+	Insert(context *fiber.Ctx) error
+	Find(context *fiber.Ctx) error
+	Update(context *fiber.Ctx) error
+	Delete(context *fiber.Ctx) error
 }
 
 type globalParameterController struct {
@@ -21,10 +31,144 @@ func NewGlobalParameterController(globalParameterService service.GlobalParameter
 }
 
 func (service *globalParameterController) All(context *fiber.Ctx) error {
-	var globalParameter []entity.GlobalParameter = service.globalParameterService.All()
-	return context.Status(200).JSON(fiber.Map{
-		"status":  "success",
-		"message": "Welcome to Golang, Fiber, and GORM",
-		"data":    globalParameter,
-	})
+	var globalParameter []dto.GlobalParameterAll = service.globalParameterService.All()
+	result := helper.BuildResponse("00", "success get data", globalParameter)
+	return context.Status(200).JSON(result)
+}
+
+func (service *globalParameterController) Insert(context *fiber.Ctx) error {
+	var globalParameterCreate *dto.GlobalParameterCreate
+
+	if err := context.BodyParser(&globalParameterCreate); err != nil {
+		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
+		return context.Status(400).JSON(res)
+	}
+
+	validate := helper.Validate(globalParameterCreate)
+	if validate != nil {
+		res := helper.BuildResponse("500", validate.Error(), helper.EmptyObj{})
+		return context.Status(200).JSON(res)
+	}
+
+	dataInsert := dto.GlobalParameter{
+		Code:      globalParameterCreate.Code,
+		Value:     globalParameterCreate.Value,
+		Name:      globalParameterCreate.Name,
+		StatusID:  1,
+		CreatedAt: time.Now(),
+	}
+
+	insert := service.globalParameterService.Insert(dataInsert)
+
+	if insert != nil {
+		res := helper.BuildResponse("400", insert.Error(), helper.EmptyObj{})
+		return context.Status(200).JSON(res)
+	} else {
+		res := helper.BuildResponse("00", "success", helper.EmptyObj{})
+		return context.Status(200).JSON(res)
+	}
+
+}
+
+func (service *globalParameterController) Find(context *fiber.Ctx) error {
+	id, err := strconv.Atoi(context.Params("id"))
+
+	if err != nil {
+		return context.JSON(err.Error())
+	}
+
+	find, errFind := service.globalParameterService.Find(id)
+
+	errors.Is(errFind, gorm.ErrRecordNotFound)
+
+	if errFind != nil {
+		res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
+		return context.JSON(res)
+	}
+
+	res := helper.BuildResponse("00", "success", find)
+	return context.JSON(res)
+}
+
+func (service *globalParameterController) Update(context *fiber.Ctx) error {
+	id, err := strconv.Atoi(context.Params("id"))
+
+	if err != nil {
+		return context.JSON(err.Error())
+	}
+
+	_, errFind := service.globalParameterService.Find(id)
+
+	errors.Is(errFind, gorm.ErrRecordNotFound)
+
+	if errFind != nil {
+		res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
+		return context.JSON(res)
+	}
+
+	var globalParameterUpdate dto.GlobalParameterUpdate
+
+	if err := context.BodyParser(&globalParameterUpdate); err != nil {
+		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
+		return context.Status(400).JSON(res)
+	}
+
+	validate := helper.Validate(globalParameterUpdate)
+	if validate != nil {
+		res := helper.BuildResponse("500", validate.Error(), helper.EmptyObj{})
+		return context.Status(200).JSON(res)
+	}
+
+	dataInsert := dto.GlobalParameter{
+		Name:      globalParameterUpdate.Name,
+		Code:      globalParameterUpdate.Code,
+		Value:     globalParameterUpdate.Value,
+		UpdatedAt: time.Now(),
+	}
+
+	update := service.globalParameterService.Update(dataInsert, id)
+
+	errors.Is(update, gorm.ErrRecordNotFound)
+
+	if update != nil {
+		res := helper.BuildResponse("400", update.Error(), helper.EmptyObj{})
+		return context.JSON(res)
+	} else {
+		res := helper.BuildResponse("00", "success", helper.EmptyObj{})
+		return context.JSON(res)
+	}
+}
+
+func (service *globalParameterController) Delete(context *fiber.Ctx) error {
+	id, err := strconv.Atoi(context.Params("id"))
+
+	if err != nil {
+		return context.JSON(err.Error())
+	}
+
+	_, errFind := service.globalParameterService.Find(id)
+
+	errors.Is(errFind, gorm.ErrRecordNotFound)
+
+	if errFind != nil {
+		res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
+		return context.JSON(res)
+	}
+
+	dataInsert := dto.GlobalParameter{
+		StatusID:  2,
+		UpdatedAt: time.Now(),
+	}
+
+	update := service.globalParameterService.Update(dataInsert, id)
+
+	errors.Is(update, gorm.ErrRecordNotFound)
+
+	if update != nil {
+		res := helper.BuildResponse("400", update.Error(), helper.EmptyObj{})
+		return context.JSON(res)
+	} else {
+		res := helper.BuildResponse("00", "success", helper.EmptyObj{})
+		return context.JSON(res)
+	}
 }
