@@ -33,6 +33,7 @@ func main() {
 
 	prefixRoute := app.Group("/api/v1")
 	route.GlobalParameterRoute(prefixRoute)
+	route.AuthRoute(prefixRoute)
 
 	app.Use("*", func(c *fiber.Ctx) error {
 		return c.Status(200).JSON("what are you looking for ?!")
