@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/tedbearr/go-learn/entity"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -34,6 +35,8 @@ func DatabaseInit() *gorm.DB {
 	if e != nil {
 		panic(e)
 	}
+
+	database.AutoMigrate(&entity.User{}, &entity.Status{}, &entity.GlobalParameter{})
 
 	return database
 }

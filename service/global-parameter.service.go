@@ -28,6 +28,7 @@ func (db *globalParameterConnection) All() []dto.GlobalParameterAll {
 	db.connection.Table("global_parameter").
 		Select("global_parameter.name, global_parameter.code, global_parameter.value, status.name as status_id").
 		Joins("left join status on status.id = global_parameter.status_id").
+		Where("global_parameter.status_id = ?", 1).
 		Find(&globalParameter)
 	return globalParameter
 }
