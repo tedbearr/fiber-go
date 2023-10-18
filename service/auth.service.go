@@ -18,6 +18,7 @@ type AuthService interface {
 	HashPassword(password string) (string, error)
 	ComparePassword(hashedPassword string, plainPassword []byte) error
 	UpdateRefreshToken(authData dto.Auth, username string) error
+	CheckUserEmail(email string) (dto.Auth, error)
 }
 
 type authConnection struct {
@@ -82,4 +83,12 @@ func (db *authConnection) UpdateRefreshToken(authData dto.Auth, username string)
 		Where("username = ?", username).
 		Updates(&authData).Error
 	return update
+}
+
+func (db *authConnection) CheckUserEmail(email string) (dto.Auth, error) {
+	var auth dto.Auth
+	check := db.connection.Table("users").
+		Where("email = ?", email).
+		First(&auth).Error
+	return auth, check
 }

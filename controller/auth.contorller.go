@@ -57,7 +57,7 @@ func (service *authController) Login(context *fiber.Ctx) error {
 	slog.Info(uniqueCode + " Login compare password... ")
 	comparePassword := service.authService.ComparePassword(user.Password, []byte(User.Password))
 	if comparePassword != nil {
-		res := helper.BuildResponse("400", comparePassword.Error(), helper.EmptyObj{})
+		res := helper.BuildResponse("400", "wrong password", helper.EmptyObj{})
 		slog.Info(uniqueCode+" Login response ", res)
 		return context.Status(400).JSON(res)
 	}
@@ -116,9 +116,25 @@ func (service *authController) Register(context *fiber.Ctx) error {
 		return context.Status(200).JSON(res)
 	}
 
-	slog.Info(uniqueCode + " Register check user... ")
+	slog.Info(uniqueCode + " Register check user username... ")
 	_, errCheck := service.authService.CheckUser(User.Username)
 	errors.Is(errCheck, gorm.ErrDuplicatedKey)
+
+	if errCheck == nil {
+		res := helper.BuildResponse("401", "duplicate username", helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return context.Status(200).JSON(res)
+	}
+
+	slog.Info(uniqueCode + " Register check user email... ")
+	_, errCheckEmail := service.authService.CheckUserEmail(User.Email)
+	errors.Is(errCheckEmail, gorm.ErrDuplicatedKey)
+
+	if errCheckEmail == nil {
+		res := helper.BuildResponse("401", "duplicate email", helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return context.Status(200).JSON(res)
+	}
 
 	slog.Info(uniqueCode + " Register hashing password... ")
 	hashedPassword, errHash := service.authService.HashPassword(User.Password)
