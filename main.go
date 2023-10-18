@@ -36,7 +36,7 @@ func main() {
 	route.AuthRoute(prefixRoute)
 
 	app.Use("*", func(c *fiber.Ctx) error {
-		return c.Status(200).JSON("what are you looking for ?!")
+		return c.Status(404).JSON("what are you looking for ?!")
 	})
 
 	log.Fatal(app.Listen(":" + port))
