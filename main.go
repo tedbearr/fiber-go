@@ -28,7 +28,7 @@ func main() {
 	port := os.Getenv("PORT")
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Status(200).JSON("Welcome")
+		return c.Status(200).JSON("Welcomeeee")
 	})
 
 	prefixRoute := app.Group("/api/v1")
