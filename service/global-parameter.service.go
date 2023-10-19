@@ -1,59 +1,81 @@
 package service
 
 import (
+	"errors"
+	"time"
+
 	"github.com/tedbearr/go-learn/dto"
+	"github.com/tedbearr/go-learn/repository"
 	"gorm.io/gorm"
 )
 
 type GlobalParameterService interface {
 	All() []dto.GlobalParameterAll
-	Insert(dto.GlobalParameter) error
+	Insert(data dto.GlobalParameterCreate) error
 	Find(id int) (dto.GlobalParameter, error)
-	Update(globalParameter dto.GlobalParameter, id int) error
-	Delete(globalParameter dto.GlobalParameter, id int) error
+	Update(globalParameter dto.GlobalParameterUpdate, id int) error
+	Delete(globalParameter dto.GlobalParameterUpdate, id int) error
 }
 
-type globalParameterConnection struct {
-	connection *gorm.DB
+type globalParameterService struct {
+	connection repository.GlobalParameterRepository
 }
 
-func NewGlobalParameterService(dbConnection *gorm.DB) GlobalParameterService {
-	return &globalParameterConnection{
-		connection: dbConnection,
+func NewGlobalParameterService(repository repository.GlobalParameterRepository) GlobalParameterService {
+	return &globalParameterService{
+		connection: repository,
 	}
 }
 
-func (db *globalParameterConnection) All() []dto.GlobalParameterAll {
-	var globalParameter []dto.GlobalParameterAll
-	db.connection.Table("global_parameter").
-		Select("global_parameter.name, global_parameter.code, global_parameter.value, status.name as status_id").
-		Joins("left join status on status.id = global_parameter.status_id").
-		Where("global_parameter.status_id = ?", 1).
-		Find(&globalParameter)
-	return globalParameter
+func (repository *globalParameterService) All() []dto.GlobalParameterAll {
+	return repository.connection.All()
 }
 
-func (db *globalParameterConnection) Insert(globalParameter dto.GlobalParameter) error {
-	err := db.connection.Table("global_parameter").
-		Create(&globalParameter).Error
-	return err
+func (repository *globalParameterService) Insert(globalParameterCreate dto.GlobalParameterCreate) error {
+	dataInsert := dto.GlobalParameter{
+		Code:      globalParameterCreate.Code,
+		Value:     globalParameterCreate.Value,
+		Name:      globalParameterCreate.Name,
+		StatusID:  1,
+		CreatedAt: time.Now(),
+	}
+	return repository.connection.Insert(dataInsert)
 }
 
-func (db *globalParameterConnection) Find(id int) (dto.GlobalParameter, error) {
-	var globalParameter dto.GlobalParameter
-	check := db.connection.Table("global_parameter").
-		First(&globalParameter, id).Error
-	return globalParameter, check
+func (repository *globalParameterService) Find(id int) (dto.GlobalParameter, error) {
+	return repository.connection.Find(id)
 }
 
-func (db *globalParameterConnection) Update(globalParameter dto.GlobalParameter, id int) error {
-	err := db.connection.Table("global_parameter").Where("id = ?", id).
-		Updates(globalParameter).Error
-	return err
+func (repository *globalParameterService) Update(globalParameterUpdate dto.GlobalParameterUpdate, id int) error {
+	_, errFind := repository.connection.Find(id)
+
+	errors.Is(errFind, gorm.ErrRecordNotFound)
+
+	if errFind != nil {
+		return errFind
+	}
+
+	dataInsert := dto.GlobalParameter{
+		Name:      globalParameterUpdate.Name,
+		Code:      globalParameterUpdate.Code,
+		Value:     globalParameterUpdate.Value,
+		UpdatedAt: time.Now(),
+	}
+	return repository.connection.Update(dataInsert, id)
 }
 
-func (db *globalParameterConnection) Delete(globalParameter dto.GlobalParameter, id int) error {
-	err := db.connection.Table("global_parameter").Where("id = ?", id).
-		Updates(globalParameter).Error
-	return err
+func (repository *globalParameterService) Delete(globalParameter dto.GlobalParameterUpdate, id int) error {
+	_, errFind := repository.connection.Find(id)
+
+	errors.Is(errFind, gorm.ErrRecordNotFound)
+
+	if errFind != nil {
+		return errFind
+	}
+
+	dataInsert := dto.GlobalParameter{
+		StatusID:  2,
+		UpdatedAt: time.Now(),
+	}
+	return repository.connection.Delete(dataInsert, id)
 }

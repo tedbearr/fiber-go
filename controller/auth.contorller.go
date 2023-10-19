@@ -1,15 +1,11 @@
 package controller
 
 import (
-	"errors"
-	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gookit/slog"
 	"github.com/tedbearr/go-learn/dto"
 	"github.com/tedbearr/go-learn/helper"
 	"github.com/tedbearr/go-learn/service"
-	"gorm.io/gorm"
 )
 
 type AuthController interface {
@@ -45,54 +41,15 @@ func (service *authController) Login(context *fiber.Ctx) error {
 		return context.Status(200).JSON(res)
 	}
 
-	slog.Info(uniqueCode + " Login check auth... ")
-	user, errCheck := service.authService.CheckUser(User.Username)
-	errors.Is(errCheck, gorm.ErrRecordNotFound)
-	if errCheck != nil {
-		res := helper.BuildResponse("400", errCheck.Error(), helper.EmptyObj{})
+	result, err := service.authService.Login(User, uniqueCode)
+
+	if err != nil {
+		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
 		slog.Info(uniqueCode+" Login response ", res)
-		return context.Status(400).JSON(res)
+		return context.Status(200).JSON(res)
 	}
 
-	slog.Info(uniqueCode + " Login compare password... ")
-	comparePassword := service.authService.ComparePassword(user.Password, []byte(User.Password))
-	if comparePassword != nil {
-		res := helper.BuildResponse("400", "wrong password", helper.EmptyObj{})
-		slog.Info(uniqueCode+" Login response ", res)
-		return context.Status(400).JSON(res)
-	}
-
-	slog.Info(uniqueCode + " Login generating access token... ")
-	accessToken, errAccessToken := service.authService.GenerateAccessToken()
-	if errAccessToken != nil {
-		res := helper.BuildResponse("400", errAccessToken.Error(), helper.EmptyObj{})
-		slog.Info(uniqueCode+" Login response ", res)
-		return context.Status(400).JSON(res)
-	}
-
-	slog.Info(uniqueCode + " Login generating refresh token... ")
-	refreshToken, errRefreshToken := service.authService.GenerateRefreshToken()
-	if errRefreshToken != nil {
-		res := helper.BuildResponse("400", errRefreshToken.Error(), helper.EmptyObj{})
-		slog.Info(uniqueCode+" Login response ", res)
-		return context.Status(400).JSON(res)
-	}
-
-	updateTokenData := dto.Auth{
-		RefreshToken: refreshToken,
-	}
-
-	slog.Info(uniqueCode + " Login updating refresh token... ")
-	updateToken := service.authService.UpdateRefreshToken(updateTokenData, User.Username)
-	if updateToken != nil {
-		res := helper.BuildResponse("400", updateToken.Error(), helper.EmptyObj{})
-		slog.Info(uniqueCode+" Login response ", res)
-		return context.Status(400).JSON(res)
-	}
-
-	data := dto.ResponseToken{AccessToken: accessToken, RefreshToken: refreshToken}
-
-	res := helper.BuildResponse("00", "success", data)
+	res := helper.BuildResponse("00", "success", result)
 	slog.Info(uniqueCode+" Login response ", res)
 	return context.Status(200).JSON(res)
 }
@@ -116,49 +73,11 @@ func (service *authController) Register(context *fiber.Ctx) error {
 		return context.Status(200).JSON(res)
 	}
 
-	slog.Info(uniqueCode + " Register check user username... ")
-	_, errCheck := service.authService.CheckUser(User.Username)
-	errors.Is(errCheck, gorm.ErrDuplicatedKey)
-
-	if errCheck == nil {
-		res := helper.BuildResponse("401", "duplicate username", helper.EmptyObj{})
+	register := service.authService.Register(User, uniqueCode)
+	if register != nil {
+		res := helper.BuildResponse("500", register.Error(), helper.EmptyObj{})
 		slog.Info(uniqueCode+" Register response ", res)
 		return context.Status(200).JSON(res)
-	}
-
-	slog.Info(uniqueCode + " Register check user email... ")
-	_, errCheckEmail := service.authService.CheckUserEmail(User.Email)
-	errors.Is(errCheckEmail, gorm.ErrDuplicatedKey)
-
-	if errCheckEmail == nil {
-		res := helper.BuildResponse("401", "duplicate email", helper.EmptyObj{})
-		slog.Info(uniqueCode+" Register response ", res)
-		return context.Status(200).JSON(res)
-	}
-
-	slog.Info(uniqueCode + " Register hashing password... ")
-	hashedPassword, errHash := service.authService.HashPassword(User.Password)
-	if errHash != nil {
-		res := helper.BuildResponse("400", errHash.Error(), helper.EmptyObj{})
-		slog.Info(uniqueCode+" Register response ", res)
-		return context.JSON(res)
-	}
-
-	dataInsert := dto.Auth{
-		Username:  User.Username,
-		Email:     User.Email,
-		Password:  hashedPassword,
-		Name:      User.Name,
-		StatusID:  1,
-		CreatedAt: time.Now(),
-	}
-
-	slog.Info(uniqueCode + " Register insert data... ")
-	insert := service.authService.Insert(dataInsert)
-	if insert != nil {
-		res := helper.BuildResponse("400", insert.Error(), helper.EmptyObj{})
-		slog.Info(uniqueCode+" Register response ", res)
-		return context.JSON(res)
 	}
 
 	res := helper.BuildResponse("00", "success", helper.EmptyObj{})

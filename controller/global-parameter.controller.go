@@ -3,7 +3,6 @@ package controller
 import (
 	"errors"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/tedbearr/go-learn/dto"
@@ -37,7 +36,7 @@ func (service *globalParameterController) All(context *fiber.Ctx) error {
 }
 
 func (service *globalParameterController) Insert(context *fiber.Ctx) error {
-	var globalParameterCreate *dto.GlobalParameterCreate
+	var globalParameterCreate dto.GlobalParameterCreate
 
 	if err := context.BodyParser(&globalParameterCreate); err != nil {
 		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
@@ -50,15 +49,7 @@ func (service *globalParameterController) Insert(context *fiber.Ctx) error {
 		return context.Status(200).JSON(res)
 	}
 
-	dataInsert := dto.GlobalParameter{
-		Code:      globalParameterCreate.Code,
-		Value:     globalParameterCreate.Value,
-		Name:      globalParameterCreate.Name,
-		StatusID:  1,
-		CreatedAt: time.Now(),
-	}
-
-	insert := service.globalParameterService.Insert(dataInsert)
+	insert := service.globalParameterService.Insert(globalParameterCreate)
 
 	if insert != nil {
 		res := helper.BuildResponse("400", insert.Error(), helper.EmptyObj{})
@@ -97,14 +88,14 @@ func (service *globalParameterController) Update(context *fiber.Ctx) error {
 		return context.JSON(err.Error())
 	}
 
-	_, errFind := service.globalParameterService.Find(id)
+	// _, errFind := service.globalParameterService.Find(id)
 
-	errors.Is(errFind, gorm.ErrRecordNotFound)
+	// errors.Is(errFind, gorm.ErrRecordNotFound)
 
-	if errFind != nil {
-		res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
-		return context.JSON(res)
-	}
+	// if errFind != nil {
+	// 	res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
+	// 	return context.JSON(res)
+	// }
 
 	var globalParameterUpdate dto.GlobalParameterUpdate
 
@@ -119,14 +110,7 @@ func (service *globalParameterController) Update(context *fiber.Ctx) error {
 		return context.Status(200).JSON(res)
 	}
 
-	dataInsert := dto.GlobalParameter{
-		Name:      globalParameterUpdate.Name,
-		Code:      globalParameterUpdate.Code,
-		Value:     globalParameterUpdate.Value,
-		UpdatedAt: time.Now(),
-	}
-
-	update := service.globalParameterService.Update(dataInsert, id)
+	update := service.globalParameterService.Update(globalParameterUpdate, id)
 
 	errors.Is(update, gorm.ErrRecordNotFound)
 
@@ -146,21 +130,7 @@ func (service *globalParameterController) Delete(context *fiber.Ctx) error {
 		return context.JSON(err.Error())
 	}
 
-	_, errFind := service.globalParameterService.Find(id)
-
-	errors.Is(errFind, gorm.ErrRecordNotFound)
-
-	if errFind != nil {
-		res := helper.BuildResponse("400", errFind.Error(), helper.EmptyObj{})
-		return context.JSON(res)
-	}
-
-	dataInsert := dto.GlobalParameter{
-		StatusID:  2,
-		UpdatedAt: time.Now(),
-	}
-
-	update := service.globalParameterService.Update(dataInsert, id)
+	update := service.globalParameterService.Update(dto.GlobalParameterUpdate{}, id)
 
 	errors.Is(update, gorm.ErrRecordNotFound)
 

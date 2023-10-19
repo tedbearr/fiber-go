@@ -1,56 +1,140 @@
 package service
 
 import (
+	"errors"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/gookit/slog"
 	"github.com/tedbearr/go-learn/dto"
+	"github.com/tedbearr/go-learn/helper"
+	"github.com/tedbearr/go-learn/repository"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type AuthService interface {
-	CheckUser(username string) (dto.Auth, error)
-	GenerateAccessToken() (string, error)
-	GenerateRefreshToken() (string, error)
-	Insert(dto.Auth) error
-	HashPassword(password string) (string, error)
-	ComparePassword(hashedPassword string, plainPassword []byte) error
-	UpdateRefreshToken(authData dto.Auth, username string) error
-	CheckUserEmail(email string) (dto.Auth, error)
+	Login(data dto.Login, uniqueCode string) (interface{}, error)
+	Register(data dto.Register, uniqueCode string) error
 }
 
-type authConnection struct {
-	connection *gorm.DB
+type authService struct {
+	connection repository.AuthRepository
 }
 
-func NewAuthService(dbConnection *gorm.DB) AuthService {
-	return &authConnection{
-		connection: dbConnection,
+func NewAuthService(authRepository repository.AuthRepository) AuthService {
+	return &authService{
+		connection: authRepository,
 	}
 }
 
-func (db *authConnection) CheckUser(username string) (dto.Auth, error) {
-	var auth dto.Auth
-	check := db.connection.Table("users").
-		Where("username = ?", username).
-		First(&auth).Error
-	return auth, check
+func (repository *authService) Login(authData dto.Login, uniqueCode string) (interface{}, error) {
+	slog.Info(uniqueCode + " Login check auth... ")
+	user, errCheck := repository.connection.CheckUsername(authData.Username)
+	errors.Is(errCheck, gorm.ErrRecordNotFound)
+	if errCheck != nil {
+		res := helper.BuildResponse("400", errCheck.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Login response ", res)
+		return res, errCheck
+	}
+
+	slog.Info(uniqueCode + " Login compare password... ")
+	comparePassword := ComparePassword(user.Password, []byte(authData.Password))
+	if comparePassword != nil {
+		res := helper.BuildResponse("400", "wrong password", helper.EmptyObj{})
+		slog.Info(uniqueCode+" Login response ", res)
+		return res, comparePassword
+	}
+
+	slog.Info(uniqueCode + " Login generating access token... ")
+	accessToken, errAccessToken := GenerateAccessToken()
+	if errAccessToken != nil {
+		res := helper.BuildResponse("400", errAccessToken.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Login response ", res)
+		return res, errAccessToken
+	}
+
+	slog.Info(uniqueCode + " Login generating refresh token... ")
+	refreshToken, errRefreshToken := GenerateRefreshToken()
+	if errRefreshToken != nil {
+		res := helper.BuildResponse("400", errRefreshToken.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Login response ", res)
+		return res, errAccessToken
+	}
+
+	updateTokenData := dto.Auth{
+		RefreshToken: refreshToken,
+	}
+
+	slog.Info(uniqueCode + " Login updating refresh token... ")
+	updateToken := repository.connection.UpdateRefreshToken(&updateTokenData, authData.Username)
+	if updateToken != nil {
+		res := helper.BuildResponse("400", updateToken.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Login response ", res)
+		return res, updateToken
+	}
+
+	data := dto.ResponseToken{AccessToken: accessToken, RefreshToken: refreshToken}
+
+	return data, nil
 }
 
-func (db *authConnection) HashPassword(password string) (string, error) {
+func (repository *authService) Register(authData dto.Register, uniqueCode string) error {
+	slog.Info(uniqueCode + " Register check user username... ")
+	_, errCheck := repository.connection.CheckUsername(authData.Username)
+	errors.Is(errCheck, gorm.ErrDuplicatedKey)
+
+	if errCheck == nil {
+		res := helper.BuildResponse("401", "duplicate username", helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return errCheck
+	}
+
+	slog.Info(uniqueCode + " Register check user email... ")
+	_, errCheckEmail := repository.connection.CheckEmail(authData.Email)
+	errors.Is(errCheckEmail, gorm.ErrDuplicatedKey)
+
+	if errCheckEmail == nil {
+		res := helper.BuildResponse("401", "duplicate email", helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return errCheckEmail
+	}
+
+	slog.Info(uniqueCode + " Register hashing password... ")
+	hashedPassword, errHash := HashPassword(authData.Password)
+	if errHash != nil {
+		res := helper.BuildResponse("400", errHash.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return errHash
+	}
+
+	dataInsert := dto.Auth{
+		Username:  authData.Username,
+		Email:     authData.Email,
+		Password:  hashedPassword,
+		Name:      authData.Name,
+		StatusID:  1,
+		CreatedAt: time.Now(),
+	}
+
+	slog.Info(uniqueCode + " Register insert data... ")
+	insert := repository.connection.Insert(&dataInsert)
+	if insert != nil {
+		res := helper.BuildResponse("400", insert.Error(), helper.EmptyObj{})
+		slog.Info(uniqueCode+" Register response ", res)
+		return insert
+	}
+
+	return nil
+}
+
+func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 	return string(hash), err
 }
 
-func (db *authConnection) Insert(authData dto.Auth) error {
-	err := db.connection.Table("users").
-		Create(&authData).Error
-	return err
-}
-
-func (db *authConnection) GenerateAccessToken() (string, error) {
+func GenerateAccessToken() (string, error) {
 	tokenSecret := os.Getenv("JWT_ACCESS_TOKEN_SECRET")
 	claims := jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Hour * 24).Unix()}
 
@@ -61,7 +145,7 @@ func (db *authConnection) GenerateAccessToken() (string, error) {
 	return resToken, err
 }
 
-func (db *authConnection) GenerateRefreshToken() (string, error) {
+func GenerateRefreshToken() (string, error) {
 	tokenSecret := os.Getenv("JWT_REFRESH_TOKEN_SECRET")
 	claims := jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Hour * 10000).Unix()}
 
@@ -72,23 +156,8 @@ func (db *authConnection) GenerateRefreshToken() (string, error) {
 	return resToken, err
 }
 
-func (db *authConnection) ComparePassword(hashedPassword string, plainPassword []byte) error {
+func ComparePassword(hashedPassword string, plainPassword []byte) error {
 	byteHash := []byte(hashedPassword)
 	err := bcrypt.CompareHashAndPassword(byteHash, plainPassword)
 	return err
-}
-
-func (db *authConnection) UpdateRefreshToken(authData dto.Auth, username string) error {
-	update := db.connection.Table("users").
-		Where("username = ?", username).
-		Updates(&authData).Error
-	return update
-}
-
-func (db *authConnection) CheckUserEmail(email string) (dto.Auth, error) {
-	var auth dto.Auth
-	check := db.connection.Table("users").
-		Where("email = ?", email).
-		First(&auth).Error
-	return auth, check
 }
