@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/tedbearr/go-learn/dto"
 	"gorm.io/gorm"
 )
@@ -11,6 +14,7 @@ type GlobalParameterRepository interface {
 	Find(id int) (dto.GlobalParameter, error)
 	Update(globalParameter dto.GlobalParameter, id int) error
 	Delete(globalParameter dto.GlobalParameter, id int) error
+	Count(wg *sync.WaitGroup) (int, error)
 }
 
 type globalParameterRepository struct {
@@ -56,4 +60,15 @@ func (db *globalParameterRepository) Delete(globalParameter dto.GlobalParameter,
 	err := db.connection.Table("global_parameter").Where("id = ?", id).
 		Updates(globalParameter).Error
 	return err
+}
+
+func (db *globalParameterRepository) Count(wg *sync.WaitGroup) (int, error) {
+	defer wg.Done()
+	var globalParameter []dto.GlobalParameterAll
+	// wg.Add(1)
+	res := db.connection.Table("global_parameter").Find(&globalParameter)
+	// wg.Done()
+	// wg.Wait()
+	fmt.Println(len(globalParameter))
+	return len(globalParameter), res.Error
 }

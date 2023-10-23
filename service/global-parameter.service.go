@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/tedbearr/go-learn/dto"
@@ -11,7 +14,7 @@ import (
 
 type GlobalParameterService interface {
 	All() []dto.GlobalParameterAll
-	Insert(data dto.GlobalParameterCreate) error
+	Insert(data dto.GlobalParameterCreate, wg *sync.WaitGroup) error
 	Find(id int) (dto.GlobalParameter, error)
 	Update(globalParameter dto.GlobalParameterUpdate, id int) error
 	Delete(globalParameter dto.GlobalParameterUpdate, id int) error
@@ -31,11 +34,14 @@ func (repository *globalParameterService) All() []dto.GlobalParameterAll {
 	return repository.connection.All()
 }
 
-func (repository *globalParameterService) Insert(globalParameterCreate dto.GlobalParameterCreate) error {
+func (repository *globalParameterService) Insert(globalParameterCreate dto.GlobalParameterCreate, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	code := repository.sequenceCodeGlobalParameter(wg)
+	// fmt.Println(code)
 	dataInsert := dto.GlobalParameter{
-		Code:      globalParameterCreate.Code,
-		Value:     globalParameterCreate.Value,
-		Name:      globalParameterCreate.Name,
+		Code:      code,
+		Value:     code,
+		Name:      code,
 		StatusID:  1,
 		CreatedAt: time.Now(),
 	}
@@ -78,4 +84,16 @@ func (repository *globalParameterService) Delete(globalParameter dto.GlobalParam
 		UpdatedAt: time.Now(),
 	}
 	return repository.connection.Delete(dataInsert, id)
+}
+
+func (repository *globalParameterService) sequenceCodeGlobalParameter(wg *sync.WaitGroup) string {
+	wg.Add(1)
+	count, err := repository.connection.Count(wg)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	a := count + 1
+	res := strconv.Itoa(a)
+	// fmt.Println(count)
+	return res
 }

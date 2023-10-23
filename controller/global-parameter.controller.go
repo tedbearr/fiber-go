@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"strconv"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/tedbearr/go-learn/dto"
@@ -37,6 +38,7 @@ func (service *globalParameterController) All(context *fiber.Ctx) error {
 
 func (service *globalParameterController) Insert(context *fiber.Ctx) error {
 	var globalParameterCreate dto.GlobalParameterCreate
+	var wg sync.WaitGroup
 
 	if err := context.BodyParser(&globalParameterCreate); err != nil {
 		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
@@ -48,9 +50,9 @@ func (service *globalParameterController) Insert(context *fiber.Ctx) error {
 		res := helper.BuildResponse("500", validate.Error(), helper.EmptyObj{})
 		return context.Status(200).JSON(res)
 	}
-
-	insert := service.globalParameterService.Insert(globalParameterCreate)
-
+	wg.Add(1)
+	insert := service.globalParameterService.Insert(globalParameterCreate, &wg)
+	wg.Wait()
 	if insert != nil {
 		res := helper.BuildResponse("400", insert.Error(), helper.EmptyObj{})
 		return context.Status(200).JSON(res)

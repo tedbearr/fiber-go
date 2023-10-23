@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"sync"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gookit/slog"
 	"github.com/tedbearr/go-learn/dto"
@@ -24,6 +26,7 @@ func NewAuthController(authService service.AuthService) AuthController {
 }
 
 func (service *authController) Login(context *fiber.Ctx) error {
+	var wg sync.WaitGroup
 	var User dto.Login
 	uniqueCode := helper.UniqueCode()
 
@@ -40,9 +43,9 @@ func (service *authController) Login(context *fiber.Ctx) error {
 		slog.Info(uniqueCode+" Login response ", res)
 		return context.Status(200).JSON(res)
 	}
-
-	result, err := service.authService.Login(User, uniqueCode)
-
+	wg.Add(1)
+	result, err := service.authService.Login(User, uniqueCode, &wg)
+	wg.Wait()
 	if err != nil {
 		res := helper.BuildResponse("400", err.Error(), helper.EmptyObj{})
 		slog.Info(uniqueCode+" Login response ", res)

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -15,7 +16,7 @@ import (
 )
 
 type AuthService interface {
-	Login(data dto.Login, uniqueCode string) (interface{}, error)
+	Login(data dto.Login, uniqueCode string, wg *sync.WaitGroup) (interface{}, error)
 	Register(data dto.Register, uniqueCode string) error
 }
 
@@ -29,7 +30,8 @@ func NewAuthService(authRepository repository.AuthRepository) AuthService {
 	}
 }
 
-func (repository *authService) Login(authData dto.Login, uniqueCode string) (interface{}, error) {
+func (repository *authService) Login(authData dto.Login, uniqueCode string, wg *sync.WaitGroup) (interface{}, error) {
+	defer wg.Done()
 	slog.Info(uniqueCode + " Login check auth... ")
 	user, errCheck := repository.connection.CheckUsername(authData.Username)
 	errors.Is(errCheck, gorm.ErrRecordNotFound)
