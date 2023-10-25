@@ -2,7 +2,6 @@ package route
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/tedbearr/go-learn/middleware"
 )
 
 // var (
@@ -12,7 +11,7 @@ import (
 // )
 
 func GlobalParameterRoute(route fiber.Router) {
-	group := route.Group("/global-parameter", middleware.Jwt)
+	group := route.Group("/global-parameter")
 	group.Get("/", globalParameterController.All)
 	group.Get("/:id", globalParameterController.Find)
 	group.Post("/insert", globalParameterController.Insert)

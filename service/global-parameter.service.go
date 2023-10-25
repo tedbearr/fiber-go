@@ -31,13 +31,26 @@ func NewGlobalParameterService(repository repository.GlobalParameterRepository) 
 }
 
 func (repository *globalParameterService) All() []dto.GlobalParameterAll {
-	return repository.connection.All()
+	// var res []dto.GlobalParameterAll
+	var messages = make(chan []dto.GlobalParameterAll)
+	go func() {
+		messages <- repository.connection.All()
+	}()
+
+	return <-messages
 }
 
 func (repository *globalParameterService) Insert(globalParameterCreate dto.GlobalParameterCreate, wg *sync.WaitGroup) error {
 	defer wg.Done()
-	code := repository.sequenceCodeGlobalParameter(wg)
+	code := repository.sequenceCodeGlobalParameter()
 	// fmt.Println(code)
+	// var code = make(chan string)
+	// wg.Add(1)
+	// go func() {
+	// defer wg.Done()
+	// code <- repository.sequenceCodeGlobalParameter(wg)
+	// }()
+	// wg.Wait()
 	dataInsert := dto.GlobalParameter{
 		Code:      code,
 		Value:     code,
@@ -86,14 +99,14 @@ func (repository *globalParameterService) Delete(globalParameter dto.GlobalParam
 	return repository.connection.Delete(dataInsert, id)
 }
 
-func (repository *globalParameterService) sequenceCodeGlobalParameter(wg *sync.WaitGroup) string {
-	wg.Add(1)
-	count, err := repository.connection.Count(wg)
+func (repository *globalParameterService) sequenceCodeGlobalParameter() string {
+	// wg.Add(1)
+	count, err := repository.connection.Count()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	a := count + 1
-	res := strconv.Itoa(a)
+	num := count + 1
+	res := strconv.Itoa(num)
 	// fmt.Println(count)
 	return res
 }

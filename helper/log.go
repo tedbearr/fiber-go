@@ -25,6 +25,26 @@ func Log() {
 
 	allLog := handler.MustFileHandler("log/"+date+".log", handler.WithLogLevels(slog.AllLevels))
 
+	// errorLog := handler.NewBuilder().
+	// 	WithLogfile("log/error.log").
+	// 	WithLogLevels(slog.DangerLevels).
+	// 	WithRotateTime(rotatefile.EveryMinute).
+	// 	Build()
+
+	// allLog := handler.NewBuilder().
+	// 	WithLogfile("log/log.log").
+	// 	WithLogLevels(slog.AllLevels).
+	// 	WithRotateTime(rotatefile.EveryMinute).
+	// 	Build()
+
+	// fc := rotatefile.NewFilesClear(func(c *rotatefile.CConfig) {
+	// 	c.AddPattern("log/log.log")
+	// 	c.BackupTime = 1
+	// })
+
+	// fc.DaemonClean(nil)
+	// fc.StopDaemon()
+
 	slog.PushHandler(errorLog)
 	slog.PushHandler(allLog)
 }
