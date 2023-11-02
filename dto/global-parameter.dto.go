@@ -22,6 +22,7 @@ type GlobalParameterCreate struct {
 }
 
 type GlobalParameterAll struct {
+	ID       int    `json:"id" form:"id"`
 	Code     string `json:"code" form:"code" validate:"required"`
 	Name     string `json:"name" form:"name" validate:"required"`
 	Value    string `json:"value" form:"value" validate:"required"`

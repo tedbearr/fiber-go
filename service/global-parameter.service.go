@@ -2,12 +2,12 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/tedbearr/go-learn/dto"
+	"github.com/tedbearr/go-learn/helper"
 	"github.com/tedbearr/go-learn/repository"
 	"gorm.io/gorm"
 )
@@ -42,7 +42,15 @@ func (repository *globalParameterService) All() []dto.GlobalParameterAll {
 
 func (repository *globalParameterService) Insert(globalParameterCreate dto.GlobalParameterCreate, wg *sync.WaitGroup) error {
 	defer wg.Done()
-	code := repository.sequenceCodeGlobalParameter()
+	var m sync.Mutex
+	m.Lock()
+	wg.Add(1)
+	a, _ := repository.connection.Count(wg)
+	num := a + 1
+	count := strconv.Itoa(num)
+	lpad := helper.Lpad(count, "0", 3)
+	code := "GP" + lpad
+
 	// fmt.Println(code)
 	// var code = make(chan string)
 	// wg.Add(1)
@@ -58,7 +66,10 @@ func (repository *globalParameterService) Insert(globalParameterCreate dto.Globa
 		StatusID:  1,
 		CreatedAt: time.Now(),
 	}
-	return repository.connection.Insert(dataInsert)
+
+	insert := repository.connection.Insert(dataInsert)
+	defer m.Unlock()
+	return insert
 }
 
 func (repository *globalParameterService) Find(id int) (dto.GlobalParameter, error) {
@@ -99,14 +110,20 @@ func (repository *globalParameterService) Delete(globalParameter dto.GlobalParam
 	return repository.connection.Delete(dataInsert, id)
 }
 
-func (repository *globalParameterService) sequenceCodeGlobalParameter() string {
-	// wg.Add(1)
-	count, err := repository.connection.Count()
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	num := count + 1
-	res := strconv.Itoa(num)
-	// fmt.Println(count)
-	return res
-}
+// func (repository *globalParameterService) sequenceCodeGlobalParameter() string {
+// 	// wg.Add(1)
+// 	var wg sync.WaitGroup
+// 	var m sync.Mutex
+// 	wg.Add(1)
+// 	m.Lock()
+// 	count, err := repository.connection.Count(&wg)
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 	}
+// 	m.Unlock()
+// 	wg.Wait()
+// 	num := count + 1
+// 	res := strconv.Itoa(num)
+// 	// fmt.Println(count)
+// 	return res
+// }

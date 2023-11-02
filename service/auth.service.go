@@ -32,6 +32,7 @@ func NewAuthService(authRepository repository.AuthRepository) AuthService {
 
 func (repository *authService) Login(authData dto.Login, uniqueCode string, wg *sync.WaitGroup) (interface{}, error) {
 	defer wg.Done()
+	var mtx sync.Mutex
 	slog.Info(uniqueCode + " Login check auth... ")
 	user, errCheck := repository.connection.CheckUsername(authData.Username)
 	errors.Is(errCheck, gorm.ErrRecordNotFound)
@@ -50,6 +51,7 @@ func (repository *authService) Login(authData dto.Login, uniqueCode string, wg *
 	}
 
 	slog.Info(uniqueCode + " Login generating access token... ")
+	mtx.Lock()
 	accessToken, errAccessToken := GenerateAccessToken()
 	if errAccessToken != nil {
 		res := helper.BuildResponse("400", errAccessToken.Error(), helper.EmptyObj{})
@@ -68,6 +70,7 @@ func (repository *authService) Login(authData dto.Login, uniqueCode string, wg *
 	updateTokenData := dto.Auth{
 		RefreshToken: refreshToken,
 	}
+	mtx.Unlock()
 
 	slog.Info(uniqueCode + " Login updating refresh token... ")
 	updateToken := repository.connection.UpdateRefreshToken(&updateTokenData, authData.Username)
